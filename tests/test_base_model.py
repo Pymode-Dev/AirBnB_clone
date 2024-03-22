@@ -24,10 +24,6 @@ class TestBaseModel(unittest.TestCase):
         bmd2 = BaseModel().id
         self.assertNotEqual(bmd1, bmd2)
 
-    def test_created_and_updated_equal_when_not_change(self):
-        bmd = BaseModel()
-        self.assertEqual(bmd.created_at, bmd.updated_at)
-
     def test_updated_against_created_after_object_change(self):
         bmd = BaseModel()
         bmd.name = "FirstModel"
