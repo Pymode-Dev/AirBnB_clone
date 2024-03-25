@@ -1,22 +1,149 @@
-#!/usr/bin/env python3
-import sys
+#!/usr/bin/python3
+""" Console module for AirBnB """
+import cmd
+from models.base_model import BaseModel
+from models.user import User
+from models.place import Place
+from models.state import State
+from models.city import City
+from models.amenity import Amenity
+from models.review import Review
+from models import storage
+import re
+import json
 
-from cmd import Cmd
 
-
-class Console(Cmd):
+class HBNBCommand(cmd.Cmd):
+    """Class for the console AirBnB"""
     prompt = "(hbnb) "
 
-    def emptyline(self):
-        pass
+    all_class = ["BaseModel", "User", "State",
+                 "City", "Amenity", "Place", "Review"]
 
-    def do_quit(self, line):
-        """quit - exit the console"""
-        sys.exit(0)
+    attr_str = ["name", "amenity_id", "place_id", "state_id",
+                "user_id", "city_id", "description", "text",
+                "email", "password", "first_name", "last_name"]
+    attr_int = ["number_rooms", "number_bathrooms",
+                "max_guest", "price_by_night"]
+    attr_float = ["latitude", "longitude"]
 
-    def do_EOF(self, line):
+    def do_EOF(self, arg):
+        """Ctrl-D to exit the program\n"""
         return True
 
+    def do_quit(self, arg):
+        """Quit command to exit the program\n"""
+        return True
 
-if __name__ == "__main__":
-    Console().cmdloop()
+    def emptyline(self):
+        """an empty line + ENTER shouldnt execute anything\n"""
+        pass
+
+    def do_create(self, arg):
+        """Creates a new instance :
+Usage: create <class name>\n"""
+        classes = {
+            "BaseModel": BaseModel,
+            "User": User,
+            "Place": Place,
+            "State": State,
+            "City": City,
+            "Amenity": Amenity,
+            "Review": Review
+        }
+        if self.valid(arg):
+            args = arg.split()
+            if args[0] in classes:
+                new_instance = classes[args[0]]()
+            storage.save()
+            print(new_instance.id)
+
+    def do_clear(self, arg):
+        """Clear data storage :
+Usage: clear\n"""
+        storage.all().clear()
+        self.do_all(arg)
+        print("** All data been clear! **")
+
+    def valid(self, arg, _id_flag=False, _att_flag=False):
+        """validation of argument that pass to commands"""
+        args = arg.split()
+        _len = len(arg.split())
+        if _len == 0:
+            print("** class name missing **")
+            return False
+        if args[0] not in HBNBCommand.all_class:
+            print("** class doesn't exist **")
+            return False
+        if _len < 2 and _id_flag:
+            print("** instance id missing **")
+            return False
+        if _id_flag and args[0]+"."+args[1] not in storage.all():
+            print("** no instance found **")
+            return False
+        if _len == 2 and _att_flag:
+            print("** attribute name missing **")
+            return False
+        if _len == 3 and _att_flag:
+            print("** value missing **")
+            return False
+        return True
+
+    def do_show(self, arg):
+        """Prints the string representation of an instance
+Usage: show <class name> <id>\n"""
+        if self.valid(arg, True):
+            args = arg.split()
+            _key = args[0]+"."+args[1]
+            print(storage.all()[_key])
+
+    def do_destroy(self, arg):
+        """Deletes an instance
+Usage: destroy <class name> <id>\n"""
+        if self.valid(arg, True):
+            args = arg.split()
+            _key = args[0]+"."+args[1]
+            del storage.all()[_key]
+            storage.save()
+
+    def do_all(self, arg):
+        """Prints all string representation of all
+instances based or not on the class name
+Usage1: all
+Usage2: all <class name>\n"""
+        args = arg.split()
+        _len = len(args)
+        my_list = []
+        if _len >= 1:
+            if args[0] not in HBNBCommand.all_class:
+                print("** class doesn't exist **")
+                return
+            for key, value in storage.all().items():
+                if args[0] in key:
+                    my_list.append(str(value))
+        else:
+            for key, value in storage.all().items():
+                my_list.append(str(value))
+        print(my_list)
+
+    def casting(self, arg):
+        """cast string to float or int if possible"""
+        try:
+            if "." in arg:
+                arg = float(arg)
+            else:
+                arg = int(arg)
+        except ValueError:
+            pass
+        return arg
+
+    def do_update(self, arg):
+        """Updates an instance by adding or updating attribute
+Usage: update <class name> <id> <attribute name> \"<attribute value>\"\n"""
+        if self.valid(arg, True, True):
+            args = arg.split()
+            _key = args[0]+"."+args[1]
+            if args[3].startswith('"'):
+                match = re.search(r'"([^"]+)"', arg).group(1)
+            elif args[3].startswith("'"):
+                match = re.search(r'\'([^\']+)\'', arg).group
