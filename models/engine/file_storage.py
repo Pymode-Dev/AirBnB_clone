@@ -1,47 +1,64 @@
-#!/usr/bin/env python3
-"""
-A class FileStorage that serializes instances to a JSON
-file and deserializes JSON file to instances.
-"""
-
+#!/usr/bin/python3
+""" Doc Here """
 import json
+import os
+from models.base_model import BaseModel
+from models.user import User
+from models.place import Place
+from models.state import State
+from models.city import City
+from models.amenity import Amenity
+from models.review import Review
+# from models.base_model import BaseModel #avoid circular
+
 
 class FileStorage:
-    """
-    class:
-        FileStorage - it serializes class instances into JSON
-        format and file, then back to class instance from JSON format.
-    Attrs:
-        __file_path: the json filepath
-        __objects: the class dict objects to transform to JSON format
-    Methods:
-        all: returns the __objects
-        new: sets in __objects the obj with key <obj class name>.id
-        save: serializes __objects to the JSON file (path: __file_path)
-        reload:  deserializes the JSON file to __objects (only if the JSON file
-        (__file_path) exists ; otherwise, do nothing. If the file doesn’t exist
-        no exception should be raised)
-    """
+    """ doc doc """
+
     __file_path = "file.json"
     __objects = {}
 
     def all(self):
-        """"
-        returns the _objects
-        """
+        """ doc doc """
         return FileStorage.__objects
 
     def new(self, obj):
-        """
-        sets in __objects the obj with key <obj class name>.id
-        """
-        FileStorage.__objects["{}.{}".format(obj.__class__.__name__, obj.id)]
+        """ doc doc """
+        id = obj.to_dict()["id"]
+        className = obj.to_dict()["__class__"]
+        keyName = className+"."+id
+        FileStorage.__objects[keyName] = obj
 
-    def sav(self):
-        """
-        save __objects in JSON format into file.
-        """
-        fpath = FileStorage.__objects
-        ndict = {obj: fpath[obj].to_dict() for obj in fpath}
-        with open(FileStorage.__file_path, "w") as f:
-            json.dump(ndict, f)
+    def save(self):
+        """ doc doc """
+        filepath = FileStorage.__file_path
+        data = dict(FileStorage.__objects)
+        for key, value in data.items():
+            data[key] = value.to_dict()
+        with open(filepath, 'w') as f:
+            json.dump(data, f)
+
+    def reload(self):
+        """ doc doc """
+        filepath = FileStorage.__file_path
+        data = FileStorage.__objects
+        if os.path.exists(filepath):
+            try:
+                with open(filepath) as f:
+                    for key, value in json.load(f).items():
+                        if "BaseModel" in key:
+                            data[key] = BaseModel(**value)
+                        if "User" in key:
+                            data[key] = User(**value)
+                        if "Place" in key:
+                            data[key] = Place(**value)
+                        if "State" in key:
+                            data[key] = State(**value)
+                        if "City" in key:
+                            data[key] = City(**value)
+                        if "Amenity" in key:
+                            data[key] = Amenity(**value)
+                        if "Review" in key:
+                            data[key] = Review(**value)
+            except Exception:
+                pass
